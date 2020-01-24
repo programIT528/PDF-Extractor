@@ -1,5 +1,6 @@
 
 from FileManager import *
+from Extractor import *
 import time
 
 # Global Variables
@@ -13,7 +14,7 @@ file_manager = FileManager()
 def header():
     print("""
      ****************************************************************
-     *                  Welcome to PDF Creeper                      *
+     *                  Welcome to PDF Extractor                    *
      * This application will scan a specific directory using the    *
      * absolute path. It can also scan just a file after a path has *
      * been specified.                                              *
@@ -38,7 +39,6 @@ def get_directory():
         print(str(index + 1) + ". " + file)
 
 def get_ouput_filename():
-    print("Existing Excel Files: ")
     file = input("Input an output filename: ")
 
     if os.path.isfile(file):       
@@ -67,10 +67,17 @@ if __name__ == "__main__":
         get_directory()
         get_ouput_filename()
 
-        print("Scanning directory")
+        print("Start scan of directory")
         start = time.time()
 
+        for pdf_file in file_manager.get_list_of_pdfs():
+            extractor = Extractor(file_manager, pdf_file)
+            extractor.extract()
 
-        print("\n\n\nFinished Scanning Directory.")
+        for file in filter(lambda f: f.endswith(".png"), os.listdir(os.getcwd())):
+            os.remove(file)
+
+        os.system("start " + file_manager.get_output_file())
+        print("\n\n\nFinished scanning directory.")
         print("Completed in: " + str(round((time.time() - start) / 60, 2)) + " minutes\n")
         again = input("Do you have another directory (y or n): ")

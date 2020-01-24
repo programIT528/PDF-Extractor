@@ -41,6 +41,7 @@ class FileManager(object):
 
     def write_df_to_csv(self, dictionary, file):
         try:
+            print(dictionary)
             dictionary.to_csv(self.__output_file__, mode="a+", header=True)
             print("Writing Data to " + self.__output_file__)
         except IOError as io:
