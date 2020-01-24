@@ -5,17 +5,7 @@ import time
 # Global Variables
 directory = None
 output_file = None
-file_manager = None
-
-if __name__ == "__main__":
-    again = 'y'
-    while again == 'y':
-        os.system("cls")
-        header()
-        get_directory()
-        get_ouput_filename()
-        file_manager = FileManager(directory,output_file)
-
+file_manager = FileManager()
 
 ################################################################################
 # Functions
@@ -34,9 +24,7 @@ def header():
      ****************************************************************
     """)
 
-def get_directory():
-    file_manager = FileManager()
-    
+def get_directory():    
     directory = input("Enter Directory to Scan for PDF files: ")
     
     if directory is None or directory == "" or os.path.isdir(directory) is False:
@@ -44,12 +32,16 @@ def get_directory():
     else:
         directory.replace("\\","\\\\")
 
+    file_manager.set_directory(directory)
+
+    for index, file in enumerate(file_manager.get_list_of_pdfs()):
+        print(str(index + 1) + ". " + file)
+
 def get_ouput_filename():
     print("Existing Excel Files: ")
-    [print(index + ". " + f) for index,f in enumerate(os.listdir(os.getcwd())) if f.endswith(".csv")]
     file = input("Input an output filename: ")
 
-    if directory.isfile(file):       
+    if os.path.isfile(file):       
         if file.endswith(".csv"):
             output_file = file
         else:
@@ -61,3 +53,24 @@ def get_ouput_filename():
             output_file = file
         else:
             output_file = file + str(".csv")
+
+    file_manager.set_output_file(output_file)
+
+################################################################################
+# Main
+################################################################################
+if __name__ == "__main__":
+    again = 'y'
+    while again == 'y':
+        os.system("cls")
+        header()
+        get_directory()
+        get_ouput_filename()
+
+        print("Scanning directory")
+        start = time.time()
+
+
+        print("\n\n\nFinished Scanning Directory.")
+        print("Completed in: " + str(round((time.time() - start) / 60, 2)) + " minutes\n")
+        again = input("Do you have another directory (y or n): ")

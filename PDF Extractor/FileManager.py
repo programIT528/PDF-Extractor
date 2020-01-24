@@ -54,6 +54,7 @@ class FileManager(object):
     def set_directory(self, directory):
         """ Moves the os path to the param: directory """
         if os.path.isdir(directory) and directory != None:
+            os.chdir(directory)
             self.__directory__ = directory
             self.__initialize_pdf_list__()
         self.initialize_outputfile()
@@ -67,7 +68,7 @@ class FileManager(object):
                 Formats file to specific requirements (adds .csv to end of file)
 
             If File doesn't exist, create a blank file with param: filename)"""
-        if self.__directory__.isfile(filename):
+        if os.path.isfile(filename):
             if filename.endswith(".csv"):
                 self.__output_file__ = filename
             else:
@@ -75,7 +76,7 @@ class FileManager(object):
         else:
             f = open(filename, "w+")
             f.close()
-            self.__output_file__ = f.name()
+            self.__output_file__ = filename
 
     def get_output_file(self):
         """ Returns the output filename for converted pdf files """
