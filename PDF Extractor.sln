@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29215.179
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "PDF Extractor", "PDF Extractor\PDF Extractor.pyproj", "{1BCE6624-5ECC-4BBF-BD89-63CC0D08F04E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1BCE6624-5ECC-4BBF-BD89-63CC0D08F04E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BCE6624-5ECC-4BBF-BD89-63CC0D08F04E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3E3970B1-D1A6-4604-8EDD-09DEAB6D0DB9}
+	EndGlobalSection
+EndGlobal
