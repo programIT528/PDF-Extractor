@@ -202,8 +202,7 @@ class Extractor(object):
                     raise TabulaError
                 else:
                     self.__text__ = new_df
-                    print(self.__text__)
-                    #print("Tabula Method: " + str(type(self.__text__)))
+                    #print(self.__text__)
 
     def __OCR_extract__(self):
         """ Convert Image to String using OCR (Optical Character Recognition) with Tesseract """
