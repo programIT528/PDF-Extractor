@@ -14,7 +14,9 @@ import os
 import numpy
 import pandas as pd
 import re
+import tabula
 from tabula import read_pdf
+import subprocess
 
 class Extractor(object):
     """ Manages PDF File Conversions """
@@ -40,17 +42,20 @@ class Extractor(object):
         except Exception as e:
             print(str(e))
     
+    def update_current_file(self):
+        self.filename = self.__file_manager__.get_directory() + "\\" + self.__pdf_file__.replace(".pdf","") + "_page_" + str(self.page_index) + ".jpg"
+        self.__pdf_image_file__ = self.filename
+
     def __OCR_file_reader__(self):
         print("Rescanning PDF File: " + self.__pdf_file__)        
-        filename = self.__file_manager__.get_directory() + "\\" + self.__pdf_file__.replace(".pdf","") + "_page_" + str(self.page_index) + ".jpg"
+        self.update_current_file()
         page = self.pages[self.page_index]
-        page.save(filename, 'JPEG')
+        page.save(self.filename, 'JPEG')
         
-        self.__pdf_image_file__ = filename
         self.__OCR_extract__()
 
-        if os.path.isfile(filename):
-            os.remove(filename)
+        if os.path.isfile(self.filename):
+            os.remove(self.filename)
 
     def format_text(self, text):
         """ Using OCR and Regex\n
@@ -115,9 +120,6 @@ class Extractor(object):
                     if bool(regCurrency.search(line)):
                         patterns["cost"] = regCurrency.search(line).group(0)
 
-                    if bool(regTurnAroundTime.search(line).group(1)):
-                        patterns["turnAroundTime"] = regTurnAroundTime(line).group(1)
-
                 except Exception as e:
                     print("Gather data in regex error: " + str(e))
 
@@ -146,43 +148,62 @@ class Extractor(object):
         return pre
     
     def write_df_to_csv(self):
-        self.__file_manager__.write_df_to_csv(self.__text__)
-
+        self.__file_manager__.write_df_to_csv(self.__text__, self.__pdf_image_file__)
+        
     ################################################################################
     # Extraction Methods
     ################################################################################
     def extract(self):
         for self.page_index in range(1, len(self.pages)):
-            print("Scanning File: " + str(self.__pdf_file__))
             try:
                 self.__tabula_extract__()
+                self.update_current_file()
                 print("Tabula extracted " + self.__pdf_image_file__)
+                self.write_df_to_csv()
             except TabulaError as te:
                 print(str(te.message))
                 try:
                     self.__OCR_file_reader__()
                     print("OCR extracted " + self.__pdf_image_file__)
+                    self.write_df_to_csv()
                 except Exception as e:
                     print(str(e))
             except Exception as e:
                     print(str(e))
 
-            self.__file_manager__.write_df_to_csv(self.__text__, self.__pdf_file__)
-            print("Finished File: " + str(self.__pdf_file__))
-            self.page_index += 1
+            
     
     def __tabula_extract__(self):
         try:
-            list_data = read_pdf(self.__pdf_file__, pages = self.page_index)
-        except Exception:
-            raise Exception
+           # df = read_pdf(self.__pdf_file__, format="CSV", pandas_options={'header' : 0}, pages = self.page_index, multiple_tables=True)
+            df = read_pdf(self.__pdf_file__, output_format="dataframe", java_options="-Xmx256m", pages = self.page_index, pandas_options={"header": 0}, multiple_tables=True)
+        except FileNotFoundError as f:
+            print(str(f))
+        except ValueError as v:
+            print(str(v))
+        except tabula.errors.CSVParseError as csv:
+            print(str(csv))
+        except tabula.errors.JavaNotFoundError as j:
+            print(str(j))
+        except subprocess.CalledProcessError as se:
+            print(str(se))
+        except Exception as e:
+            print("Tabula Extraction Error: " + str(e))
         
-        if list_data is None or list_data == "" or list_data == {} or list_data == []:
+
+        # read_pdfs will return a list of dataframes
+        #   select and index of the list to return the dataframe structure
+        if df == None or df == []:
             raise TabulaError
-        
-        df = pd.DataFrame(list_data)
-        self.__text__ = df
-        #print("Tabula Method: " + str(type(self.__text__)))
+        else:
+            for index, df in enumerate(df):
+                new_df = pd.DataFrame(df)
+                if new_df.empty:
+                    raise TabulaError
+                else:
+                    self.__text__ = new_df
+                    print(self.__text__)
+                    #print("Tabula Method: " + str(type(self.__text__)))
 
     def __OCR_extract__(self):
         """ Convert Image to String using OCR (Optical Character Recognition) with Tesseract """
@@ -193,6 +214,8 @@ class Extractor(object):
             print("Error in 'image_to_string' IOError: " + str(io))
         except Exception as e:
             print("Error in 'image_to_string' method: " + str(e))
+
+
 
 
 class TabulaError(Exception):

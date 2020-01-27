@@ -71,8 +71,10 @@ if __name__ == "__main__":
         start = time.time()
 
         for pdf_file in file_manager.get_list_of_pdfs():
+            print("\n\nScanning New PDF File: " + str(pdf_file))
             extractor = Extractor(file_manager, pdf_file)
             extractor.extract()
+            print("Finished Scanning PDF File: " + str(pdf_file))
 
         for file in filter(lambda f: f.endswith(".png"), os.listdir(os.getcwd())):
             os.remove(file)

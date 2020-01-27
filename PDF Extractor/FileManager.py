@@ -40,14 +40,13 @@ class FileManager(object):
             print(str(e))
 
     def write_df_to_csv(self, dictionary, file):
-        try:
-            print(dictionary)
+        try:            
             dictionary.to_csv(self.__output_file__, mode="a+", header=True)
             print("Writing Data to " + self.__output_file__)
         except IOError as io:
-            print("Error in method dict_to_csv_file: " + str(io))
+            print("IOError in method write_df_to_csv: " + str(io))
         except Exception as e:
-            print("Error has occured in dict_to_csv_file: " + str(e))
+            print("Error has occured in write_df_to_csv: " + str(e))
 
     ################################################################################
     # Setters and Getters
