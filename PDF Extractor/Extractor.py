@@ -57,12 +57,39 @@ class Extractor(object):
         if os.path.isfile(self.filename):
             os.remove(self.filename)
 
+    def get_protocol_for_pdf_file(self):
+        pages = pdf2image.convert_from_path(pdf_path=self.__pdf_file__, dpi=300, first_page=1,jpegopt='quality')
+        
+        for number, page in enumerate(pages):
+            if self.protocol is None or self.protocol == "":
+                patternProgram = "(?<=Program. )\w+| (?<=ogram. )\w+"
+                patternProtocol = "(?<=Protocol. )\w+|(?<=Pratocol. )\w+|(?<=Protoco!. )\w+"
+
+                regProgram = re.compile(patternProgram)
+                regProtocol = re.compile(patternProtocol)
+                
+                text = str(pytesseract.image_to_string(page, lang = "eng"))
+                try:
+                    if self.protocol == "":
+                        if bool(regProgram.search(text)) and bool(regProtocol.search(text)):
+                            self.protocol = regProgram.search(text).group(0) + "_" + regProtocol.search(text).group(0)
+                    elif bool(regProtocol.search(text)):
+                        self.protocol = regProtocol.search(text).group(0)
+                    else: 
+                        pass
+                except Exception as e:
+                    print("Determine protocols in format text function error: " + str(e))
+            else:
+                break
+
+        return self.protocol
+
     def format_text(self, text):
         """ Using OCR and Regex\n
         Extract Data using pre-defined regex patterns"""
 
-        patternProgram = "(?<=Program. )\w+| (?<=ogram. )\w+"
-        patternProtocol = "(?<=Protocol. )\w+|(?<=Pratocol. )\w+|(?<=Protoco!. )\w+"
+        #patternProgram = "(?<=Program. )\w+| (?<=ogram. )\w+"
+        #patternProtocol = "(?<=Protocol. )\w+|(?<=Pratocol. )\w+|(?<=Protoco!. )\w+"
         patternCurrency = "([\£\$\€]{1}[,\d]+.?\d*)|included|Included"
         patternMethod = "(EPA[0-9., ]+)|(EPA[0-9\w.,]+)|(SM[0-9.,\-A-Za-z]+)|(SM [0-9.,\-\w]+)|(PA[0-9,. ]+)"
         patternLab = "(^Water Quality Lab|^HALL|^WQL|^HEAL|^SLD)"
@@ -74,20 +101,20 @@ class Extractor(object):
         regLab = re.compile(patternLab)
         regAnalyte = re.compile(patternAnalyte)
         regHolding = re.compile(patternHolding)
-        regProgram = re.compile(patternProgram)
-        regProtocol = re.compile(patternProtocol)
+        #regProgram = re.compile(patternProgram)
+        #regProtocol = re.compile(patternProtocol)
         regTurnAroundTime = re.compile(patternHolding)
 
-        try:
-            if self.protocol == "":
-                if bool(regProgram.search(text)) and bool(regProtocol.search(text)):
-                    self.protocol = regProgram.search(text).group(0) + "_" + regProtocol.search(text).group(0)
-                elif bool(regProtocol.search(text)):
-                    self.protocol = regProtocol.search(text).group(0)
-                else: 
-                    pass
-        except Exception as e:
-            print("Determine protocols in format text function error: " + str(e))
+        #try:
+        #    if self.protocol == "":
+        #        if bool(regProgram.search(text)) and bool(regProtocol.search(text)):
+        #            self.protocol = regProgram.search(text).group(0) + "_" + regProtocol.search(text).group(0)
+        #        elif bool(regProtocol.search(text)):
+        #            self.protocol = regProtocol.search(text).group(0)
+        #        else: 
+        #            pass
+        #except Exception as e:
+        #    print("Determine protocols in format text function error: " + str(e))
 
         list_words = []
         for line in text.splitlines():
@@ -171,8 +198,6 @@ class Extractor(object):
             except Exception as e:
                     print(str(e))
 
-            
-    
     def __tabula_extract__(self):
         try:
            # df = read_pdf(self.__pdf_file__, format="CSV", pandas_options={'header' : 0}, pages = self.page_index, multiple_tables=True)
@@ -201,6 +226,10 @@ class Extractor(object):
                 if new_df.empty:
                     raise TabulaError
                 else:
+                    new_df["protocol"] = self.protocol
+                    cols = new_df.columns.tolist()
+                    cols.insert(0, cols.pop(cols.index("protocol")))
+                    new_df = new_df.reindex(columns = cols)
                     self.__text__ = new_df
                     #print(self.__text__)
 
