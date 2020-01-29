@@ -73,6 +73,7 @@ if __name__ == "__main__":
         for pdf_file in file_manager.get_list_of_pdfs():
             print("\n\nScanning New PDF File: " + str(pdf_file))
             extractor = Extractor(file_manager, pdf_file)
+            print("Pages: " + str(len(extractor.pages)))
             print("Protocol: " + extractor.get_protocol_for_pdf_file())
 
             extractor.extract()

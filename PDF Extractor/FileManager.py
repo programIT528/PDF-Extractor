@@ -40,13 +40,16 @@ class FileManager(object):
             print(str(e))
 
     def write_df_to_csv(self, dictionary, file):
-        try:            
-            dictionary.to_csv(self.__output_file__, mode="a+", header=True)
-            print("Writing Data to " + self.__output_file__)
-        except IOError as io:
-            print("IOError in method write_df_to_csv: " + str(io))
-        except Exception as e:
-            print("Error has occured in write_df_to_csv: " + str(e))
+        if type(dictionary) != None or dictionary != type(None):
+            try:
+                dictionary.to_csv(self.__output_file__, mode="a+", header=True)
+                print("Writing Data to " + self.__output_file__)
+            except IOError as io:
+                print("IOError in method write_df_to_csv: " + str(io))
+            except Exception as e:
+                print("Error has occured in write_df_to_csv: " + str(e))
+        else: 
+            print("There wasn't a table to write to csv file.")
 
     ################################################################################
     # Setters and Getters

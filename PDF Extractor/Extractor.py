@@ -17,6 +17,7 @@ import re
 import tabula
 from tabula import read_pdf
 import subprocess
+import camelot
 
 class Extractor(object):
     """ Manages PDF File Conversions """
@@ -38,7 +39,7 @@ class Extractor(object):
     ################################################################################
     def pdf_description(self):
         try:
-            self.pages = pdf2image.convert_from_path(pdf_path=self.__pdf_file__, dpi=300, first_page=1,jpegopt='quality')
+            self.pages = pdf2image.convert_from_path(pdf_path=self.__pdf_file__, dpi=300,jpegopt='quality')
         except Exception as e:
             print(str(e))
     
@@ -47,8 +48,7 @@ class Extractor(object):
         self.__pdf_image_file__ = self.filename
 
     def __OCR_file_reader__(self):
-        print("Rescanning PDF File: " + self.__pdf_file__)        
-        self.update_current_file()
+        print("Rescanning PDF File: " + self.__pdf_file__)
         page = self.pages[self.page_index]
         page.save(self.filename, 'JPEG')
         
@@ -57,10 +57,8 @@ class Extractor(object):
         if os.path.isfile(self.filename):
             os.remove(self.filename)
 
-    def get_protocol_for_pdf_file(self):
-        pages = pdf2image.convert_from_path(pdf_path=self.__pdf_file__, dpi=300, first_page=1,jpegopt='quality')
-        
-        for number, page in enumerate(pages):
+    def get_protocol_for_pdf_file(self):        
+        for number, page in enumerate(self.pages):
             if self.protocol is None or self.protocol == "":
                 patternProgram = "(?<=Program. )\w+| (?<=ogram. )\w+"
                 patternProtocol = "(?<=Protocol. )\w+|(?<=Pratocol. )\w+|(?<=Protoco!. )\w+"
@@ -181,27 +179,29 @@ class Extractor(object):
     # Extraction Methods
     ################################################################################
     def extract(self):
-        for self.page_index in range(1, len(self.pages)):
+        for self.page_index in range(0, len(self.pages)):            
             try:
                 self.__tabula_extract__()
                 self.update_current_file()
                 print("Tabula extracted " + self.__pdf_image_file__)
-                self.write_df_to_csv()
             except TabulaError as te:
-                print(str(te.message))
+                print(str(te.message))                           
                 try:
+                    self.update_current_file()
                     self.__OCR_file_reader__()
                     print("OCR extracted " + self.__pdf_image_file__)
                     self.write_df_to_csv()
                 except Exception as e:
-                    print(str(e))
+                    print("After OCR Error: " + str(e))                    
+                    self.update_current_file()
             except Exception as e:
-                    print(str(e))
+                    print("Extract Method Error: " + str(e))
+                    self.update_current_file()
 
     def __tabula_extract__(self):
         try:
            # df = read_pdf(self.__pdf_file__, format="CSV", pandas_options={'header' : 0}, pages = self.page_index, multiple_tables=True)
-            df = read_pdf(self.__pdf_file__, output_format="dataframe", java_options="-Xmx256m", pages = self.page_index, pandas_options={"header": 0}, multiple_tables=True)
+            df = read_pdf(self.__pdf_file__, output_format="dataframe", java_options="-Xmx256m", pages = self.page_index + 1, pandas_options={"header": 0}, multiple_tables=True)
         except FileNotFoundError as f:
             print(str(f))
         except ValueError as v:
@@ -214,6 +214,7 @@ class Extractor(object):
             print(str(se))
         except Exception as e:
             print("Tabula Extraction Error: " + str(e))
+            raise TabulaError
         
 
         # read_pdfs will return a list of dataframes
@@ -221,10 +222,33 @@ class Extractor(object):
         if df == None or df == []:
             raise TabulaError
         else:
-            for index, df in enumerate(df):
-                new_df = pd.DataFrame(df)
+            for index, table in enumerate(df):
+                new_df = pd.DataFrame(table)
                 if new_df.empty:
                     raise TabulaError
+                else:
+                    new_df["protocol"] = self.protocol
+                    cols = new_df.columns.tolist()
+                    cols.insert(0, cols.pop(cols.index("protocol")))
+                    new_df = new_df.reindex(columns = cols)
+                    self.__text__ = new_df
+                    self.write_df_to_csv()
+                    #print(self.__text__)
+
+    def __camelot_extract__(self):
+        try:
+            df = camelot.read_pdf(self.__pdf_file__)
+        except Exception as e:
+            print(str(e))
+            raise CamelotError
+
+        if df.n == None or df.n == [] or df.n == 0:
+            raise CamelotError
+        else:
+            for index, df in enumerate(df._tables):
+                new_df = pd.DataFrame(df)
+                if new_df.empty:
+                    raise CamelotError
                 else:
                     new_df["protocol"] = self.protocol
                     cols = new_df.columns.tolist()
@@ -235,18 +259,33 @@ class Extractor(object):
 
     def __OCR_extract__(self):
         """ Convert Image to String using OCR (Optical Character Recognition) with Tesseract """
-        try:
-            image_text = str(pytesseract.image_to_string(self.__pdf_image_file__, lang = "eng"))
-            self.format_text(image_text)
+        try:            
+            #image_data = str(pytesseract.image_to_string(self.__pdf_image_file__, lang = "eng"))
+            #self.format_text(image_data)
+            df = pytesseract.image_to_data(self.__pdf_image_file__, lang="eng", nice=0, output_type="data.frame", pandas_config={'header': 0})
+            df = df.dropna()
+            df = df.sort_values(by=['level', 'word_num'], ascending=True)
+            df = df.pivot_table("text", index = ["level", "page_num", "line_num", "block_num"], columns = 'word_num', aggfunc=lambda x: ' '.join(x))
+            df = df.dropna(axis=0, how='all')
+            #df = df.drop(columns=['level','page_num', 'block_num', 'par_num', 'line_num','word_num'])
+            
+            df["protocol"] = self.protocol
+            cols = df.columns.tolist()
+            cols.insert(0, cols.pop(cols.index("protocol")))
+            df = df.reindex(columns = cols)
+            #print(df)
+            self.__text__ = df
         except IOError as io:
             print("Error in 'image_to_string' IOError: " + str(io))
         except Exception as e:
             print("Error in 'image_to_string' method: " + str(e))
 
-
-
-
 class TabulaError(Exception):
     """ Tabula Error """
     def __init__(self):
         self.message = "Tabula cannot read an image file."
+
+class CamelotError(Exception):
+    """ Camelot Error """
+    def __init__(self):
+        self.message = "Camelot could not read the file."
